@@ -6,8 +6,8 @@ namespace ElevenLabs.Gemini
     public class GeminiConfig : ScriptableObject
     {
         public string apiKey;
-        public string modelId = "gemini-1.5-flash";
+        public string modelId = "gemini-2.5-flash";
         public float temperature = 0.2f;
-        public string baseUrl = "https://generativelanguage.googleapis.com/v1";
+        public string baseUrl = "https://generativelanguage.googleapis.com/v1beta";
     }
 }
