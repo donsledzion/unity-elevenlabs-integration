@@ -1,0 +1,21 @@
+{
+    "name": "com.softaware.localizationtools",
+    "version": "1.0.0",
+    "displayName": "AI Localization Tools",
+    "description": "An Editor extension for Unity that automates bulk translation and Text-to-Speech (TTS) generation directly within the Editor using external AI APIs (ElevenLabs, Gemini, Z.ai).",
+    "unity": "2021.3",
+    "dependencies": {
+        "com.unity.localization": "1.0.0"
+    },
+    "keywords": [
+        "localization",
+        "tts",
+        "elevenlabs",
+        "ai",
+        "gemini",
+        "zai"
+    ],
+    "author": {
+        "name": "Adam Chojaczyk (SoftAware)"
+    }
+}

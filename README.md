@@ -12,11 +12,18 @@ This tool integrates with third-party APIs (ElevenLabs, Google Gemini, Z.ai). Yo
 
 ---
 
-## 📦 Prerequisites
+## 📦 Installation via Unity Package Manager (Recommended)
 
-This tool is built on top of Unity's official Localization system. You must have it installed in your project before using these tools.
+You can install this package directly into your Unity project using the Unity Package Manager (UPM).
 
-- **Unity Localization Package:** (Install via Package Manager: `com.unity.localization`)
+1. Open your Unity project.
+2. Go to **Window -> Package Manager**.
+3. Click the **+** (plus) icon in the top-left corner and select **"Add package from git URL..."**.
+4. Paste the following URL:
+   `https://github.com/donsledzion/unity-elevenlabs-integration.git?path=Assets/LocalizationTools`
+5. Click **Add**. Unity will download the package and automatically resolve required dependencies (it will install the Unity Localization package if you do not have it).
+
+> **Note on Prerequisites:** This tool is built on top of Unity's official Localization system. If you install via the Git URL above, UPM will handle downloading the `com.unity.localization` dependency for you automatically.
 
 ---
 
