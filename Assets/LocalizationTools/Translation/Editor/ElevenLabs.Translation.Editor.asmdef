@@ -1,0 +1,28 @@
+{
+    "name": "ElevenLabs.Translation.Editor",
+    "rootNamespace": "ElevenLabs.Editor",
+    "references": [
+        "ElevenLabs.Runtime",
+        "ElevenLabs.Core.Editor",
+        "Unity.Localization",
+        "Unity.Localization.Editor",
+        "Unity.ResourceManager"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.localization",
+            "expression": "1.0.0",
+            "define": "UNITY_LOCALIZATION"
+        }
+    ],
+    "noEngineReferences": false
+}

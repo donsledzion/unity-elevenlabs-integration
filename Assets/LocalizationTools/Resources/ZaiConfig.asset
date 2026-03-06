@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ee4907ffc4623a40a152238d27d7429, type: 3}
+  m_Name: ZaiConfig
+  m_EditorClassIdentifier: Assembly-CSharp::ElevenLabs.Zai.ZaiConfig
+  apiKey: 4412cd26d36d44d89de0b53d72093805.96oMMFLyr8cFdUqB
+  baseUrl: https://open.bigmodel.cn/api/paas/v4/chat/completions
+  model: glm-4-plus
