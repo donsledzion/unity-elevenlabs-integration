@@ -12,6 +12,14 @@ This tool integrates with third-party APIs (ElevenLabs, Google Gemini, Z.ai). Yo
 
 ---
 
+## 📦 Prerequisites
+
+This tool is built on top of Unity's official Localization system. You must have it installed in your project before using these tools.
+
+- **Unity Localization Package:** (Install via Package Manager: `com.unity.localization`)
+
+---
+
 ## 🛠️ Setup & Configuration
 
 Before using the tools, you must configure your API providers.
