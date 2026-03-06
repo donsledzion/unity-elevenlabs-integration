@@ -69,3 +69,11 @@ crashlytics-build.properties
 
 # Apple Silicon
 .DS_Store
+
+# --- Sensitive Data (API Keys) ---
+Assets/LocalizationTools/Resources/ElevenLabsConfig.asset
+Assets/LocalizationTools/Resources/GeminiConfig.asset
+Assets/LocalizationTools/Resources/ZaiConfig.asset
+Assets/LocalizationTools/Resources/ElevenLabsConfig.asset.meta
+Assets/LocalizationTools/Resources/GeminiConfig.asset.meta
+Assets/LocalizationTools/Resources/ZaiConfig.asset.meta
