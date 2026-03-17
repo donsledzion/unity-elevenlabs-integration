@@ -1,4 +1,5 @@
 using UnityEngine;
+using ElevenLabs.Utils;
 
 namespace ElevenLabs
 {
@@ -6,7 +7,7 @@ namespace ElevenLabs
     public class ElevenLabsConfig : ScriptableObject
     {
         [Header("API Authentication")]
-        [SerializeField] private string apiKey;
+        [SerializeField, PasswordField] private string apiKey;
         
         [Header("Default Settings")]
         [SerializeField] private string defaultVoiceId = "21m00Tcm4TlvDq8ikWAM"; // Rachel

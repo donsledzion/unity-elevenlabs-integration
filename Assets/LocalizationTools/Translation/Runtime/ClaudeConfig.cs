@@ -1,11 +1,12 @@
 using UnityEngine;
+using ElevenLabs.Utils;
 
 namespace ElevenLabs.Claude
 {
     [CreateAssetMenu(fileName = "ClaudeConfig", menuName = "ElevenLabs/Claude Config")]
     public class ClaudeConfig : ScriptableObject
     {
-        [SerializeField] private string apiKey;
+        [SerializeField, PasswordField] private string apiKey;
         [SerializeField] private string baseUrl = "https://api.anthropic.com/v1/messages";
         [SerializeField] private string model = "claude-3-5-sonnet-20240620";
         [SerializeField] [Range(0f, 1f)] private float temperature = 0.1f;

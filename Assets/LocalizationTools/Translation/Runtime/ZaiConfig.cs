@@ -1,11 +1,12 @@
 using UnityEngine;
+using ElevenLabs.Utils;
 
 namespace ElevenLabs.Zai
 {
     [CreateAssetMenu(fileName = "ZaiConfig", menuName = "ElevenLabs/Z.ai Config")]
     public class ZaiConfig : ScriptableObject
     {
-        [SerializeField] private string apiKey;
+        [SerializeField, PasswordField] private string apiKey;
         [SerializeField] private string baseUrl = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
         [SerializeField] private string model = "glm-4.7-flash";
         
