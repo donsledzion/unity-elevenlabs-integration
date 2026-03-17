@@ -4,6 +4,8 @@ using UnityEditor;
 using UnityEngine;
 using ElevenLabs.Zai;
 using ElevenLabs.Gemini;
+using ElevenLabs.OpenAI;
+using ElevenLabs.Claude;
 
 namespace ElevenLabs.Editor
 {
@@ -12,10 +14,14 @@ namespace ElevenLabs.Editor
         private const string ElevenConfigPath = "Assets/LocalizationTools/Resources/ElevenLabsConfig.asset";
         private const string ZaiConfigPath = "Assets/LocalizationTools/Resources/ZaiConfig.asset";
         private const string GeminiConfigPath = "Assets/LocalizationTools/Resources/GeminiConfig.asset";
+        private const string OpenAIConfigPath = "Assets/LocalizationTools/Resources/OpenAIConfig.asset";
+        private const string ClaudeConfigPath = "Assets/LocalizationTools/Resources/ClaudeConfig.asset";
         
         private SerializedObject _serializedElevenConfig;
         private SerializedObject _serializedZaiConfig;
         private SerializedObject _serializedGeminiConfig;
+        private SerializedObject _serializedOpenAIConfig;
+        private SerializedObject _serializedClaudeConfig;
 
         public LocalizationSettingsProvider(string path, SettingsScope scope = SettingsScope.Project)
             : base(path, scope) { }
@@ -30,6 +36,12 @@ namespace ElevenLabs.Editor
 
             var geminiConfig = GetOrCreateConfig<GeminiConfig>(GeminiConfigPath);
             if (geminiConfig != null) _serializedGeminiConfig = new SerializedObject(geminiConfig);
+
+            var openAIConfig = GetOrCreateConfig<OpenAIConfig>(OpenAIConfigPath);
+            if (openAIConfig != null) _serializedOpenAIConfig = new SerializedObject(openAIConfig);
+
+            var claudeConfig = GetOrCreateConfig<ClaudeConfig>(ClaudeConfigPath);
+            if (claudeConfig != null) _serializedClaudeConfig = new SerializedObject(claudeConfig);
         }
 
         public override void OnGUI(string searchContext)
@@ -80,6 +92,45 @@ namespace ElevenLabs.Editor
 
             EditorGUILayout.Space(10);
 
+            if (_serializedOpenAIConfig != null)
+            {
+                _serializedOpenAIConfig.Update();
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField("OpenAI Settings", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(_serializedOpenAIConfig.FindProperty("apiKey"));
+                EditorGUILayout.PropertyField(_serializedOpenAIConfig.FindProperty("model"));
+                EditorGUILayout.PropertyField(_serializedOpenAIConfig.FindProperty("baseUrl"));
+                EditorGUILayout.PropertyField(_serializedOpenAIConfig.FindProperty("temperature"));
+
+                if (GUILayout.Button("Get OpenAI API Key", GUILayout.Width(180)))
+                    Application.OpenURL("https://platform.openai.com/api-keys");
+
+                _serializedOpenAIConfig.ApplyModifiedProperties();
+                EditorGUILayout.EndVertical();
+            }
+
+            EditorGUILayout.Space(10);
+
+            if (_serializedClaudeConfig != null)
+            {
+                _serializedClaudeConfig.Update();
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                EditorGUILayout.LabelField("Claude (Anthropic) Settings", EditorStyles.boldLabel);
+                EditorGUILayout.PropertyField(_serializedClaudeConfig.FindProperty("apiKey"));
+                EditorGUILayout.PropertyField(_serializedClaudeConfig.FindProperty("model"));
+                EditorGUILayout.PropertyField(_serializedClaudeConfig.FindProperty("baseUrl"));
+                EditorGUILayout.PropertyField(_serializedClaudeConfig.FindProperty("temperature"));
+                EditorGUILayout.PropertyField(_serializedClaudeConfig.FindProperty("maxTokens"));
+
+                if (GUILayout.Button("Get Claude API Key", GUILayout.Width(180)))
+                    Application.OpenURL("https://console.anthropic.com/settings/keys");
+
+                _serializedClaudeConfig.ApplyModifiedProperties();
+                EditorGUILayout.EndVertical();
+            }
+
+            EditorGUILayout.Space(10);
+
             if (_serializedZaiConfig != null)
             {
                 _serializedZaiConfig.Update();
@@ -116,7 +167,7 @@ namespace ElevenLabs.Editor
         {
             return new LocalizationSettingsProvider("Project/AI Localization", SettingsScope.Project)
             {
-                keywords = new HashSet<string>(new[] { "Localization", "Translation", "TTS", "Speech", "Gemini", "Zai", "ElevenLabs" })
+                keywords = new HashSet<string>(new[] { "Localization", "Translation", "TTS", "Speech", "Gemini", "Zai", "ElevenLabs", "OpenAI", "ChatGPT", "Claude", "Anthropic" })
             };
         }
     }

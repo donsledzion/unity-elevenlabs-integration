@@ -11,6 +11,8 @@ using UnityEditor.Localization;
 using ElevenLabs.Zai;
 using ElevenLabs.Models;
 using ElevenLabs.Gemini;
+using ElevenLabs.OpenAI;
+using ElevenLabs.Claude;
 #endif
 
 namespace ElevenLabs.Editor
@@ -23,7 +25,7 @@ namespace ElevenLabs.Editor
             GetWindow<Multitranslator>("Multitranslator");
         }
 
-        public enum TranslationProvider { Zai, Gemini }
+        public enum TranslationProvider { Zai, Gemini, OpenAI, Claude }
         private TranslationProvider _provider = TranslationProvider.Gemini;
 
         private void OnGUI()
@@ -159,7 +161,67 @@ namespace ElevenLabs.Editor
                     ), this);
                     await tcs.Task;
                 }
-                else
+                else if (_provider == TranslationProvider.OpenAI)
+                {
+                    var openAIConfig = AssetDatabase.LoadAssetAtPath<OpenAIConfig>("Assets/LocalizationTools/Resources/OpenAIConfig.asset");
+                    if (openAIConfig == null || !openAIConfig.IsValid)
+                    {
+                        Debug.LogError("OpenAI Configuration is missing or invalid!");
+                        continue;
+                    }
+
+                    var openAIClient = new OpenAIClient(openAIConfig);
+                    var tcs = new TaskCompletionSource<bool>();
+                    EditorCoroutineRunner.StartCoroutine(openAIClient.TranslateBatch(_sourceTable.LocaleIdentifier.Code, locale.Identifier.Code, batch, 
+                        (results) => {
+                            foreach (var res in results)
+                            {
+                                var e = targetTable.GetEntry(res.key) ?? targetTable.AddEntry(res.key, "");
+                                e.Value = res.value;
+                            }
+                            EditorUtility.SetDirty(targetTable);
+                            EditorUtility.SetDirty(collection);
+                            Debug.Log($"OpenAI: Translated {results.Count} keys for {locale.Identifier.Code}.");
+                            tcs.SetResult(true);
+                        },
+                        (error) => {
+                            Debug.LogError($"OpenAI Error ({locale.Identifier.Code}): {error}");
+                            tcs.SetResult(false);
+                        }, _translationContext
+                    ), this);
+                    await tcs.Task;
+                }
+                else if (_provider == TranslationProvider.Claude)
+                {
+                    var claudeConfig = AssetDatabase.LoadAssetAtPath<ClaudeConfig>("Assets/LocalizationTools/Resources/ClaudeConfig.asset");
+                    if (claudeConfig == null || !claudeConfig.IsValid)
+                    {
+                        Debug.LogError("Claude Configuration is missing or invalid!");
+                        continue;
+                    }
+
+                    var claudeClient = new ClaudeClient(claudeConfig);
+                    var tcs = new TaskCompletionSource<bool>();
+                    EditorCoroutineRunner.StartCoroutine(claudeClient.TranslateBatch(_sourceTable.LocaleIdentifier.Code, locale.Identifier.Code, batch, 
+                        (results) => {
+                            foreach (var res in results)
+                            {
+                                var e = targetTable.GetEntry(res.key) ?? targetTable.AddEntry(res.key, "");
+                                e.Value = res.value;
+                            }
+                            EditorUtility.SetDirty(targetTable);
+                            EditorUtility.SetDirty(collection);
+                            Debug.Log($"Claude: Translated {results.Count} keys for {locale.Identifier.Code}.");
+                            tcs.SetResult(true);
+                        },
+                        (error) => {
+                            Debug.LogError($"Claude Error ({locale.Identifier.Code}): {error}");
+                            tcs.SetResult(false);
+                        }, _translationContext
+                    ), this);
+                    await tcs.Task;
+                }
+                else if (_provider == TranslationProvider.Zai)
                 {
                     var zaiConfig = AssetDatabase.LoadAssetAtPath<ZaiConfig>("Assets/LocalizationTools/Resources/ZaiConfig.asset");
                     if (zaiConfig == null || string.IsNullOrEmpty(zaiConfig.ApiKey))
