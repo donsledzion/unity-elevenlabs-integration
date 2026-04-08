@@ -86,10 +86,10 @@ namespace ElevenLabs.Gemini
                 yield break;
             }
 
-            string listJson = JsonUtility.ToJson(new BatchTranslationResult { results = entries });
+            var listJson = JsonUtility.ToJson(new BatchTranslationResult { results = entries });
 
-            string contextPrompt = string.IsNullOrEmpty(context) ? "" : $" Context for translation: {context}.";
-            string prompt = $"Translate the following JSON entries from {sourceLang} to {targetLang}.{contextPrompt} " +
+            var contextPrompt = string.IsNullOrEmpty(context) ? "" : $" Context for translation: {context}.";
+            var prompt = $"Translate the following JSON entries from {sourceLang} to {targetLang}.{contextPrompt} " +
                             "Return ONLY a JSON object with the key 'results' which is an array of objects with 'key' and 'value' (the translated text). " +
                             $"Entries: {listJson}";
 
@@ -111,14 +111,14 @@ namespace ElevenLabs.Gemini
                 }
             };
 
-            string json = JsonUtility.ToJson(requestBody);
+            var json = JsonUtility.ToJson(requestBody);
             
-            string baseUrl = (_config.baseUrl ?? "").Trim();
-            string modelId = (_config.modelId ?? "").Trim();
-            string apiKey = (_config.apiKey ?? "").Trim();
+            var baseUrl = (_config.baseUrl ?? "").Trim();
+            var modelId = (_config.modelId ?? "").Trim();
+            var apiKey = (_config.apiKey ?? "").Trim();
 
             if (!baseUrl.EndsWith("/models")) baseUrl += "/models";
-            string url = $"{baseUrl}/{modelId}:generateContent?key={apiKey}";
+            var url = $"{baseUrl}/{modelId}:generateContent?key={apiKey}";
             
             Debug.Log($"Gemini Request URL: {baseUrl}/{modelId}:generateContent?key=***");
 
@@ -143,7 +143,7 @@ namespace ElevenLabs.Gemini
                     var response = JsonUtility.FromJson<GeminiResponse>(request.downloadHandler.text);
                     if (response?.candidates != null && response.candidates.Count > 0)
                     {
-                        string content = response.candidates[0].content.parts[0].text;
+                        var content = response.candidates[0].content.parts[0].text;
                         Debug.Log($"Gemini Raw Response Part: {content}");
                         
                         // Handle potential markdown block from LLM

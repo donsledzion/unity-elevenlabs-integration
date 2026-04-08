@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEditor;
+using UnityEngine;
 
 namespace ElevenLabs.Editor
 {
@@ -7,7 +8,7 @@ namespace ElevenLabs.Editor
     {
         public static void StartCoroutine(IEnumerator routine, EditorWindow owner = null)
         {
-            System.Collections.Generic.Stack<IEnumerator> stack = new System.Collections.Generic.Stack<IEnumerator>();
+            var stack = new System.Collections.Generic.Stack<IEnumerator>();
             stack.Push(routine);
 
             EditorApplication.CallbackFunction update = null;
@@ -19,7 +20,13 @@ namespace ElevenLabs.Editor
                     return;
                 }
 
-                IEnumerator top = stack.Peek();
+                var top = stack.Peek();
+
+                if (top.Current is AsyncOperation op && !op.isDone)
+                {
+                    return;
+                }
+
                 if (top.MoveNext())
                 {
                     if (top.Current is IEnumerator nested)

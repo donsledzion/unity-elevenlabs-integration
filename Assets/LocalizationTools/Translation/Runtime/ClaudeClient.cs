@@ -49,6 +49,8 @@ namespace ElevenLabs.Claude
 
             yield return request.SendWebRequest();
 
+            while (!request.isDone) yield return null;
+
             if (request.result != UnityWebRequest.Result.Success)
             {
                 onError?.Invoke($"Claude Error: {request.error}\n{request.downloadHandler.text}");
@@ -112,6 +114,8 @@ namespace ElevenLabs.Claude
             request.SetRequestHeader("Content-Type", "application/json");
 
             yield return request.SendWebRequest();
+
+            while (!request.isDone) yield return null;
 
             if (request.result != UnityWebRequest.Result.Success)
             {

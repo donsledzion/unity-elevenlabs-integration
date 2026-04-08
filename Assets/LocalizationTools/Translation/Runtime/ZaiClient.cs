@@ -36,9 +36,9 @@ namespace ElevenLabs.Zai
                 temperature = 0.1f // Low temperature for stable translation
             };
 
-            string json = JsonUtility.ToJson(requestData);
+            var json = JsonUtility.ToJson(requestData);
             var request = new UnityWebRequest(_config.BaseUrl, "POST");
-            byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+            var bodyRaw = Encoding.UTF8.GetBytes(json);
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
             
@@ -91,9 +91,9 @@ namespace ElevenLabs.Zai
                 temperature = 0.1f
             };
 
-            string json = JsonUtility.ToJson(requestData);
+            var json = JsonUtility.ToJson(requestData);
             var request = new UnityWebRequest(_config.BaseUrl, "POST");
-            byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+            var bodyRaw = Encoding.UTF8.GetBytes(json);
             request.uploadHandler = new UploadHandlerRaw(bodyRaw);
             request.downloadHandler = new DownloadHandlerBuffer();
             
@@ -107,7 +107,7 @@ namespace ElevenLabs.Zai
                     var response = JsonUtility.FromJson<ZaiChatResponse>(responseText);
                     if (response?.choices != null && response.choices.Length > 0)
                     {
-                        string content = response.choices[0].message.content.Trim();
+                        var content = response.choices[0].message.content.Trim();
                         // Handle potential markdown block from LLM
                         if (content.StartsWith("```json")) content = content.Substring(7);
                         if (content.EndsWith("```")) content = content.Substring(0, content.Length - 3);
