@@ -30,6 +30,8 @@ namespace ElevenLabs.Editor
         [SerializeField] private string _targetFolderPath = "Assets/LocalizationTools/Audio";
         [SerializeField] private TTSOverwriteMode _overwriteMode = TTSOverwriteMode.MissingOnly;
         [SerializeField] private TTSMappingMode _mappingMode = TTSMappingMode.ByKey;
+        [SerializeField] private bool _makeAddressable = true;
+        [SerializeField] private bool _simplifyAddressableKey = true;
         [SerializeField] private bool _showLocaleMapping = true;
         [SerializeField] private bool _showPaidVoices = false;
 
@@ -80,6 +82,15 @@ namespace ElevenLabs.Editor
 
             _mappingMode = (TTSMappingMode)EditorGUILayout.EnumPopup("Mapping Mode", _mappingMode);
             _overwriteMode = (TTSOverwriteMode)EditorGUILayout.EnumPopup("Overwrite Mode", _overwriteMode);
+
+            EditorGUILayout.Space();
+            _makeAddressable = EditorGUILayout.Toggle("Set Files as Addressable", _makeAddressable);
+            EditorGUI.indentLevel++;
+            using (new EditorGUI.DisabledGroupScope(!_makeAddressable))
+            {
+                _simplifyAddressableKey = EditorGUILayout.Toggle("Simplify Addressable Key", _simplifyAddressableKey);
+            }
+            EditorGUI.indentLevel--;
 
             EditorGUILayout.Space();
             _showLocaleMapping = EditorGUILayout.BeginFoldoutHeaderGroup(_showLocaleMapping, "Locale to Voice Mapping");
@@ -262,6 +273,8 @@ namespace ElevenLabs.Editor
                         entry.Guid = guid;
                         EditorUtility.SetDirty(targetTable);
                         Debug.Log($"Successfully registered entry '{key}' in table '{targetTable.name}' with GUID: {guid}");
+
+                        RegisterAddressable(relativePath, guid);
                     }
                     else
                     {
@@ -276,6 +289,22 @@ namespace ElevenLabs.Editor
                 }), this);
 
             return tcs.Task;
+        }
+
+        private void RegisterAddressable(string assetPath, string guid)
+        {
+#if UNITY_ADDRESSABLES
+            if (!_makeAddressable) return;
+
+            var settings = UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings;
+            if (settings == null) return;
+
+            var entry = settings.CreateOrMoveEntry(guid, settings.DefaultGroup);
+            if (entry != null && _simplifyAddressableKey)
+            {
+                entry.address = System.IO.Path.GetFileNameWithoutExtension(assetPath);
+            }
+#endif
         }
 
         private string SanitizeLanguageCode(string langCode)
