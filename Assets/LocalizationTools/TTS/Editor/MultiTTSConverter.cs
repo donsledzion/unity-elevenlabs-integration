@@ -22,23 +22,14 @@ namespace ElevenLabs.Editor
             GetWindow<MultiTTSConverter>("Multi-TTS Converter");
         }
 
-        private void OnGUI()
-        {
-            EditorGUILayout.LabelField("Mass TTS Conversion Tool (ElevenLabs)", EditorStyles.boldLabel);
-            EditorGUILayout.Space();
+        public enum TTSOverwriteMode { All, MissingOnly }
+        public enum TTSMappingMode { ByKey, ByIndex }
 
-#if !UNITY_LOCALIZATION
-            EditorGUILayout.HelpBox("Unity Localization package is required for this tool.", MessageType.Error);
-#else
-            DrawTTSUI();
-#endif
-        }
-
-#if UNITY_LOCALIZATION
         [SerializeField] private StringTable _sourceTable;
         [SerializeField] private AssetTable _targetTable;
         [SerializeField] private string _targetFolderPath = "Assets/LocalizationTools/Audio";
-        [SerializeField] private bool _overwriteExisting = false;
+        [SerializeField] private TTSOverwriteMode _overwriteMode = TTSOverwriteMode.MissingOnly;
+        [SerializeField] private TTSMappingMode _mappingMode = TTSMappingMode.ByKey;
         [SerializeField] private bool _showLocaleMapping = true;
         [SerializeField] private bool _showPaidVoices = false;
 
@@ -53,6 +44,19 @@ namespace ElevenLabs.Editor
                 UpdateFilteredVoices();
         }
 
+        private void OnGUI()
+        {
+            EditorGUILayout.LabelField("Mass TTS Conversion Tool (ElevenLabs)", EditorStyles.boldLabel);
+            EditorGUILayout.Space();
+
+#if !UNITY_LOCALIZATION
+            EditorGUILayout.HelpBox("Unity Localization package is required for this tool.", MessageType.Error);
+#else
+            DrawTTSUI();
+#endif
+        }
+
+#if UNITY_LOCALIZATION
         private void DrawTTSUI()
         {
             _sourceTable = (StringTable)EditorGUILayout.ObjectField("Source String Table", _sourceTable, typeof(StringTable), false);
@@ -65,7 +69,7 @@ namespace ElevenLabs.Editor
             _targetFolderPath = EditorGUILayout.TextField("Target Folder", _targetFolderPath);
             if (GUILayout.Button("Browse", GUILayout.Width(60)))
             {
-                string path = EditorUtility.OpenFolderPanel("Select Target Folder", "Assets", "");
+                var path = EditorUtility.OpenFolderPanel("Select Target Folder", "Assets", "");
                 if (!string.IsNullOrEmpty(path))
                 {
                     if (path.StartsWith(Application.dataPath))
@@ -74,7 +78,8 @@ namespace ElevenLabs.Editor
             }
             EditorGUILayout.EndHorizontal();
 
-            _overwriteExisting = EditorGUILayout.Toggle("Overwrite Existing Assets", _overwriteExisting);
+            _mappingMode = (TTSMappingMode)EditorGUILayout.EnumPopup("Mapping Mode", _mappingMode);
+            _overwriteMode = (TTSOverwriteMode)EditorGUILayout.EnumPopup("Overwrite Mode", _overwriteMode);
 
             EditorGUILayout.Space();
             _showLocaleMapping = EditorGUILayout.BeginFoldoutHeaderGroup(_showLocaleMapping, "Locale to Voice Mapping");
@@ -87,9 +92,10 @@ namespace ElevenLabs.Editor
 
                 EditorGUILayout.Space();
 
-                foreach (var locale in LocalizationSettings.AvailableLocales.Locales)
+                var locales = LocalizationSettings.AvailableLocales.Locales;
+                foreach (var locale in locales)
                 {
-                    string code = locale.Identifier.Code;
+                    var code = locale.Identifier.Code;
                     EditorGUILayout.BeginHorizontal();
                     EditorGUILayout.LabelField(code, GUILayout.Width(60));
                     
@@ -97,10 +103,10 @@ namespace ElevenLabs.Editor
 
                     if (_filteredVoiceIds != null && _filteredVoiceIds.Length > 0 && _filteredVoiceIds[0] != "")
                     {
-                        int currentIndex = Array.IndexOf(_filteredVoiceIds, _localeVoiceMap[code]);
+                        var currentIndex = Array.IndexOf(_filteredVoiceIds, _localeVoiceMap[code]);
                         if (currentIndex == -1) currentIndex = 0;
 
-                        int newIndex = EditorGUILayout.Popup(currentIndex, _filteredVoiceNames);
+                        var newIndex = EditorGUILayout.Popup(currentIndex, _filteredVoiceNames);
                         _localeVoiceMap[code] = _filteredVoiceIds[newIndex];
                     }
                     else
@@ -140,56 +146,87 @@ namespace ElevenLabs.Editor
             if (!System.IO.Directory.Exists(_targetFolderPath))
                 System.IO.Directory.CreateDirectory(_targetFolderPath);
 
-            Debug.Log($"Starting mass TTS conversion for {locales.Count} locales...");
+            // Get shared data to access keys in order
+            var sourceSharedData = _sourceTable.SharedData;
+            var targetSharedData = _targetTable.SharedData;
+
+            if (sourceSharedData == null || targetSharedData == null)
+            {
+                Debug.LogError("Shared Table Data missing for one of the tables!");
+                return;
+            }
+
+            var sourceSharedEntries = sourceSharedData.Entries;
+            var targetSharedEntries = targetSharedData.Entries;
+
+            Debug.Log($"Starting mass TTS conversion ({_mappingMode} / {_overwriteMode}) for {locales.Count} locales...");
 
             foreach (var locale in locales)
             {
-                string langCode = locale.Identifier.Code;
+                var langCode = locale.Identifier.Code;
                 if (!_localeVoiceMap.ContainsKey(langCode))
                 {
                     Debug.LogWarning($"Locale {langCode} not found in voice map. Skipping.");
                     continue;
                 }
 
-                string voiceId = _localeVoiceMap[langCode];
+                var voiceId = _localeVoiceMap[langCode];
                 if (string.IsNullOrEmpty(voiceId))
                 {
                     Debug.LogWarning($"No voice ID assigned for locale {langCode}. Skipping.");
                     continue;
                 }
 
-                Debug.Log($"Processing locale: {langCode} with voice: {voiceId}");
-
                 var stringTable = LocalizationSettings.StringDatabase.GetTable(_sourceTable.TableCollectionName, locale);
-                if (stringTable == null)
-                {
-                    Debug.LogWarning($"String Table not found for locale {langCode}.");
-                    continue;
-                }
-
                 var assetTable = LocalizationSettings.AssetDatabase.GetTable(_targetTable.TableCollectionName, locale) as AssetTable;
-                if (assetTable == null)
+
+                if (stringTable == null || assetTable == null)
                 {
-                    Debug.LogWarning($"Asset Table not found for locale {langCode}.");
+                    Debug.LogWarning($"Table(s) not found for locale {langCode}. Skipping.");
                     continue;
                 }
 
-                var entries = stringTable.Values.ToList();
-                Debug.Log($"Found {entries.Count} entries for {langCode}.");
-
-                foreach (var entry in entries)
+                if (_mappingMode == TTSMappingMode.ByIndex)
                 {
-                    if (string.IsNullOrEmpty(entry.Value)) continue;
+                    var count = Math.Min(sourceSharedEntries.Count, targetSharedEntries.Count);
+                    Debug.Log($"Processing {count} entries via Index Match for {langCode}.");
 
-                    var existingEntry = assetTable.GetEntry(entry.Key);
-                    if (existingEntry != null && !_overwriteExisting)
+                    for (var i = 0; i < count; i++)
                     {
-                        Debug.Log($"Key '{entry.Key}' already has an asset. Skipping.");
-                        continue;
-                    }
+                        var sourceKey = sourceSharedEntries[i].Key;
+                        var targetKey = targetSharedEntries[i].Key;
 
-                    string sanitizedLangCode = SanitizeLanguageCode(langCode);
-                    await GenerateAndRegisterAudio(client, entry.Key, entry.Value, voiceId, sanitizedLangCode, langCode, assetTable);
+                        var sourceEntry = stringTable.GetEntry(sourceKey);
+                        if (sourceEntry == null || string.IsNullOrEmpty(sourceEntry.Value)) continue;
+
+                        var targetEntry = assetTable.GetEntry(targetKey);
+                        if (_overwriteMode == TTSOverwriteMode.MissingOnly && targetEntry != null && !string.IsNullOrEmpty(targetEntry.Guid))
+                        {
+                            continue;
+                        }
+
+                        var sanitizedLangCode = SanitizeLanguageCode(langCode);
+                        await GenerateAndRegisterAudio(client, targetKey, sourceEntry.Value, voiceId, sanitizedLangCode, langCode, assetTable);
+                    }
+                }
+                else // By Key
+                {
+                    Debug.Log($"Processing {sourceSharedEntries.Count} entries via Key Match for {langCode}.");
+                    foreach (var sharedSource in sourceSharedEntries)
+                    {
+                        var key = sharedSource.Key;
+                        var sourceEntry = stringTable.GetEntry(key);
+                        if (sourceEntry == null || string.IsNullOrEmpty(sourceEntry.Value)) continue;
+
+                        var targetEntry = assetTable.GetEntry(key);
+                        if (_overwriteMode == TTSOverwriteMode.MissingOnly && targetEntry != null && !string.IsNullOrEmpty(targetEntry.Guid))
+                        {
+                            continue;
+                        }
+
+                        var sanitizedLangCode = SanitizeLanguageCode(langCode);
+                        await GenerateAndRegisterAudio(client, key, sourceEntry.Value, voiceId, sanitizedLangCode, langCode, assetTable);
+                    }
                 }
             }
 
@@ -205,11 +242,10 @@ namespace ElevenLabs.Editor
             EditorCoroutineRunner.StartCoroutine(client.TextToSpeech(text, voiceId, null, apiLangCode, new ElevenLabsVoiceSettings(), 
                 (audioData) => 
                 {
-                    string fileName = $"{key}_{unityLangCode}.mp3";
-                    string relativePath = System.IO.Path.Combine(_targetFolderPath, fileName).Replace("\\", "/");
-                    string fullPath = System.IO.Path.Combine(Application.dataPath.Substring(0, Application.dataPath.Length - 6), relativePath);
+                    var fileName = $"{key}_{unityLangCode}.mp3";
+                    var relativePath = System.IO.Path.Combine(_targetFolderPath, fileName).Replace("\\", "/");
+                    var fullPath = System.IO.Path.Combine(Application.dataPath.Substring(0, Application.dataPath.Length - 6), relativePath);
                     
-                    Debug.Log($"Writing audio file to: {fullPath}");
                     System.IO.File.WriteAllBytes(fullPath, audioData);
                     
                     AssetDatabase.Refresh();
@@ -217,11 +253,9 @@ namespace ElevenLabs.Editor
 
                     ApplyAudioSettings(relativePath);
 
-                    AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(relativePath);
-                    string guid = AssetDatabase.AssetPathToGUID(relativePath);
+                    var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(relativePath);
+                    var guid = AssetDatabase.AssetPathToGUID(relativePath);
                     
-                    Debug.Log($"Asset Data: Path={relativePath}, GUID={guid}, ClipValid={clip != null}");
-
                     if (!string.IsNullOrEmpty(guid))
                     {
                         var entry = targetTable.GetEntry(key) ?? targetTable.AddEntry(key, guid);
@@ -231,7 +265,7 @@ namespace ElevenLabs.Editor
                     }
                     else
                     {
-                        Debug.LogError($"Failed to get GUID for asset at {relativePath}. Check if file was created correctly.");
+                        Debug.LogError($"Failed to get GUID for asset at {relativePath}.");
                     }
                     tcs.SetResult(true);
                 }, 
@@ -247,9 +281,9 @@ namespace ElevenLabs.Editor
         private string SanitizeLanguageCode(string langCode)
         {
             if (string.IsNullOrEmpty(langCode)) return langCode;
-            int dashIndex = langCode.IndexOf('-');
+            var dashIndex = langCode.IndexOf('-');
             if (dashIndex > 0) return langCode.Substring(0, dashIndex);
-            int underscoreIndex = langCode.IndexOf('_');
+            var underscoreIndex = langCode.IndexOf('_');
             if (underscoreIndex > 0) return langCode.Substring(0, underscoreIndex);
             return langCode;
         }
@@ -282,7 +316,7 @@ namespace ElevenLabs.Editor
 
             var filtered = _availableVoices
                 .Where(v => {
-                    string cat = (v.category ?? "").ToLower();
+                    var cat = (v.category ?? "").ToLower();
                     return _showPaidVoices || cat == "pre-made" || cat == "premade" || cat == "default";
                 })
                 .ToList();
@@ -293,10 +327,10 @@ namespace ElevenLabs.Editor
 
         private void ApplyAudioSettings(string assetPath)
         {
-            AudioImporter importer = AssetImporter.GetAtPath(assetPath) as AudioImporter;
+            var importer = AssetImporter.GetAtPath(assetPath) as AudioImporter;
             if (importer == null) return;
             importer.forceToMono = true;
-            AudioImporterSampleSettings settings = importer.defaultSampleSettings;
+            var settings = importer.defaultSampleSettings;
             settings.loadType = AudioClipLoadType.CompressedInMemory;
             settings.compressionFormat = AudioCompressionFormat.ADPCM;
             importer.defaultSampleSettings = settings;
