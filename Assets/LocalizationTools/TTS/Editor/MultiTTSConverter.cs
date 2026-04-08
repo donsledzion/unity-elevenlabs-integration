@@ -30,8 +30,6 @@ namespace ElevenLabs.Editor
         [SerializeField] private string _targetFolderPath = "Assets/LocalizationTools/Audio";
         [SerializeField] private TTSOverwriteMode _overwriteMode = TTSOverwriteMode.MissingOnly;
         [SerializeField] private TTSMappingMode _mappingMode = TTSMappingMode.ByKey;
-        [SerializeField] private bool _makeAddressable = true;
-        [SerializeField] private bool _simplifyAddressableKey = true;
         [SerializeField] private bool _showLocaleMapping = true;
         [SerializeField] private bool _showPaidVoices = false;
 
@@ -82,15 +80,6 @@ namespace ElevenLabs.Editor
 
             _mappingMode = (TTSMappingMode)EditorGUILayout.EnumPopup("Mapping Mode", _mappingMode);
             _overwriteMode = (TTSOverwriteMode)EditorGUILayout.EnumPopup("Overwrite Mode", _overwriteMode);
-
-            EditorGUILayout.Space();
-            _makeAddressable = EditorGUILayout.Toggle("Set Files as Addressable", _makeAddressable);
-            EditorGUI.indentLevel++;
-            using (new EditorGUI.DisabledGroupScope(!_makeAddressable))
-            {
-                _simplifyAddressableKey = EditorGUILayout.Toggle("Simplify Addressable Key", _simplifyAddressableKey);
-            }
-            EditorGUI.indentLevel--;
 
             EditorGUILayout.Space();
             _showLocaleMapping = EditorGUILayout.BeginFoldoutHeaderGroup(_showLocaleMapping, "Locale to Voice Mapping");
@@ -157,6 +146,13 @@ namespace ElevenLabs.Editor
             if (!System.IO.Directory.Exists(_targetFolderPath))
                 System.IO.Directory.CreateDirectory(_targetFolderPath);
 
+            var collection = LocalizationEditorSettings.GetAssetTableCollection(_targetTable.TableCollectionName);
+            if (collection == null)
+            {
+                Debug.LogError("Could not find AssetTableCollection for the target table!");
+                return;
+            }
+
             // Get shared data to access keys in order
             var sourceSharedData = _sourceTable.SharedData;
             var targetSharedData = _targetTable.SharedData;
@@ -217,7 +213,7 @@ namespace ElevenLabs.Editor
                         }
 
                         var sanitizedLangCode = SanitizeLanguageCode(langCode);
-                        await GenerateAndRegisterAudio(client, targetKey, sourceEntry.Value, voiceId, sanitizedLangCode, langCode, assetTable);
+                        await GenerateAndRegisterAudio(client, targetKey, sourceEntry.Value, voiceId, sanitizedLangCode, langCode, assetTable, collection);
                     }
                 }
                 else // By Key
@@ -236,7 +232,7 @@ namespace ElevenLabs.Editor
                         }
 
                         var sanitizedLangCode = SanitizeLanguageCode(langCode);
-                        await GenerateAndRegisterAudio(client, key, sourceEntry.Value, voiceId, sanitizedLangCode, langCode, assetTable);
+                        await GenerateAndRegisterAudio(client, key, sourceEntry.Value, voiceId, sanitizedLangCode, langCode, assetTable, collection);
                     }
                 }
             }
@@ -246,7 +242,7 @@ namespace ElevenLabs.Editor
             Debug.Log("TTS Conversion process completed.");
         }
 
-        private Task GenerateAndRegisterAudio(ElevenLabsClient client, string key, string text, string voiceId, string apiLangCode, string unityLangCode, AssetTable targetTable)
+        private Task GenerateAndRegisterAudio(ElevenLabsClient client, string key, string text, string voiceId, string apiLangCode, string unityLangCode, AssetTable targetTable, AssetTableCollection collection)
         {
             var tcs = new TaskCompletionSource<bool>();
             
@@ -265,20 +261,16 @@ namespace ElevenLabs.Editor
                     ApplyAudioSettings(relativePath);
 
                     var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(relativePath);
-                    var guid = AssetDatabase.AssetPathToGUID(relativePath);
                     
-                    if (!string.IsNullOrEmpty(guid))
+                    if (clip != null)
                     {
-                        var entry = targetTable.GetEntry(key) ?? targetTable.AddEntry(key, guid);
-                        entry.Guid = guid;
+                        collection.AddAssetToTable(targetTable, key, clip);
                         EditorUtility.SetDirty(targetTable);
-                        Debug.Log($"Successfully registered entry '{key}' in table '{targetTable.name}' with GUID: {guid}");
-
-                        RegisterAddressable(relativePath, guid);
+                        Debug.Log($"Successfully registered entry '{key}' in table '{targetTable.name}' via AssetTableCollection.");
                     }
                     else
                     {
-                        Debug.LogError($"Failed to get GUID for asset at {relativePath}.");
+                        Debug.LogError($"Failed to load AudioClip at {relativePath}.");
                     }
                     tcs.SetResult(true);
                 }, 
@@ -289,22 +281,6 @@ namespace ElevenLabs.Editor
                 }), this);
 
             return tcs.Task;
-        }
-
-        private void RegisterAddressable(string assetPath, string guid)
-        {
-#if UNITY_ADDRESSABLES
-            if (!_makeAddressable) return;
-
-            var settings = UnityEditor.AddressableAssets.AddressableAssetSettingsDefaultObject.Settings;
-            if (settings == null) return;
-
-            var entry = settings.CreateOrMoveEntry(guid, settings.DefaultGroup);
-            if (entry != null && _simplifyAddressableKey)
-            {
-                entry.address = System.IO.Path.GetFileNameWithoutExtension(assetPath);
-            }
-#endif
         }
 
         private string SanitizeLanguageCode(string langCode)
